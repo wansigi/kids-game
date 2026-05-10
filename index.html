@@ -3,84 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>슈퍼 픽셀 몬스터 배틀</title>
+    <title>슈퍼 픽셀 몬스터 배틀 2.0</title>
     <style>
+        /* 폰트 및 기본 스타일 (이전과 동일) */
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        body { margin: 0; padding: 0; overflow: hidden; background: #1a1a1a; color: white; font-family: 'Press Start 2P', cursive; touch-action: none; user-select: none; }
+        #game-stage { display: flex; width: 100vw; height: 100vh; background: linear-gradient(to bottom, #1d2b36, #000000); position: relative; }
+        .side { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; z-index: 1; cursor: pointer; }
 
-        body {
-            margin: 0; padding: 0; overflow: hidden;
-            background: #1a1a1a; color: white;
-            font-family: 'Press Start 2P', cursive;
-            touch-action: none; user-select: none;
-        }
-
-        #game-stage {
-            display: flex; width: 100vw; height: 100vh;
-            background: linear-gradient(to bottom, #2c3e50, #000000);
-            position: relative;
-        }
-
-        .side {
-            flex: 1; display: flex; flex-direction: column;
-            justify-content: center; align-items: center;
-            position: relative; z-index: 1;
-        }
-
-        /* 캐릭터 이미지 및 애니메이션 */
-        .char-wrapper { position: relative; transition: transform 0.1s; }
+        /* 캐릭터 애니메이션 스타일 */
+        .char-wrapper { position: relative; transition: transform 0.1s ease-out; }
         .character { width: 180px; height: auto; image-rendering: pixelated; }
+        
+        /* [핵심] Idle 애니메이션 (숨쉬기) */
+        @keyframes idle { 0% { transform: scaleY(1); } 50% { transform: scaleY(1.03); } 100% { transform: scaleY(1); } }
+        .idle { animation: idle 1.5s infinite ease-in-out; }
 
-        /* 타격 효과 */
-        .dmg-text {
-            position: absolute; color: #ffeb3b; font-size: 20px;
-            animation: floatUp 0.8s forwards; pointer-events: none;
-            text-shadow: 2px 2px #000;
-        }
-        @keyframes floatUp {
-            0% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(-100px); }
-        }
+        /* 공격/피격 효과 */
+        .dmg-text { position: absolute; color: #ffeb3b; font-size: 20px; animation: floatUp 0.8s forwards; pointer-events: none; text-shadow: 2px 2px #000; font-family: 'Press Start 2P', cursive; z-index: 5; }
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-100px); } }
+        .shake { animation: shakeAnim 0.3s; }
+        @keyframes shakeAnim { 0%, 100% { transform: translate(0, 0); } 20% { transform: translate(4px, 4px); } 40% { transform: translate(-4px, -4px); } 60% { transform: translate(4px, -4px); } 80% { transform: translate(-4px, 4px); } }
 
-        /* 체력바 디자인 */
+        /* UI/게이지 스타일 (이전과 동일) */
         .ui-box { width: 80%; margin-bottom: 20px; text-align: center; }
         .hp-bg { height: 25px; background: #444; border: 4px solid #fff; position: relative; }
         .hp-fill { height: 100%; background: #4caf50; width: 100%; transition: width 0.3s; }
-        .name-tag { margin-bottom: 10px; font-size: 12px; }
-
-        /* 필살기 게이지 */
+        .name-tag { margin-bottom: 10px; font-size: 12px; text-shadow: 1px 1px #000; }
         .sp-bg { height: 10px; background: #222; margin-top: 5px; border: 2px solid #fff; }
         .sp-fill { height: 100%; background: #e91e63; width: 0%; transition: width 0.1s; }
 
-        /* 화면 흔들림 */
-        .shake { animation: shakeAnim 0.2s; }
-        @keyframes shakeAnim {
-            0% { transform: translate(2px, 2px); }
-            25% { transform: translate(-2px, -2px); }
-            50% { transform: translate(2px, -2px); }
-            100% { transform: translate(0, 0); }
-        }
+        /* [핵심] 승리 화면 오버레이 */
+        #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 100; transition: opacity 0.5s; }
+        #win-card { border: 10px solid #fff; padding: 30px; background: #222; text-align: center; border-radius: 10px; transform: scale(0.8); opacity: 0; transition: transform 0.5s, opacity 0.5s; }
+        #win-card.show { transform: scale(1); opacity: 1; }
+        #win-msg { font-size: 30px; color: #ffeb3b; margin-bottom: 30px; text-shadow: 3px 3px #000; }
+        #win-char-img { width: 250px; height: auto; image-rendering: pixelated; margin-bottom: 30px; animation: winnerJump 1s infinite; }
+        @keyframes winnerJump { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+        button { padding: 20px 40px; font-family: 'Press Start 2P'; background: #ff5722; color: white; border: none; cursor: pointer; border-radius: 5px; box-shadow: 0 4px #bf360c; }
+        button:active { box-shadow: 0 1px #bf360c; transform: translateY(3px); }
 
-        /* 필살기 연출 */
-        #special-fx {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: white; opacity: 0; pointer-events: none; z-index: 10;
-        }
-
-        #overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); display: none;
-            flex-direction: column; justify-content: center; align-items: center; z-index: 100;
-        }
-        button {
-            padding: 20px 40px; font-family: 'Press Start 2P';
-            background: #ff5722; color: white; border: none; cursor: pointer;
-        }
+        /* 플래시 효과 */
+        #flash { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: white; opacity: 0; pointer-events: none; z-index: 10; }
     </style>
 </head>
 <body>
 
 <div id="game-stage">
-    <div id="special-fx"></div>
+    <div id="flash"></div>
     
     <div class="side" onclick="doAction('left')">
         <div class="ui-box">
@@ -88,9 +58,8 @@
             <div class="hp-bg"><div id="hp-l" class="hp-fill"></div></div>
             <div class="sp-bg"><div id="sp-l" class="sp-fill"></div></div>
         </div>
-        <div id="wrapper-l" class="char-wrapper">
-            <img src="oni.png" class="character">
-        </div>
+        <div id="wrapper-l" class="char-wrapper idle">
+            <img src="oni_idle.png" class="character" id="img-l"> </div>
     </div>
 
     <div class="side" onclick="doAction('right')">
@@ -99,89 +68,120 @@
             <div class="hp-bg"><div id="hp-r" class="hp-fill"></div></div>
             <div class="sp-bg"><div id="sp-r" class="sp-fill"></div></div>
         </div>
-        <div id="wrapper-r" class="char-wrapper">
-            <img src="harmony.png" class="character">
-        </div>
+        <div id="wrapper-r" class="char-wrapper idle">
+            <img src="harmony_idle.png" class="character" id="img-r"> </div>
     </div>
 </div>
 
 <div id="overlay">
-    <h1 id="win-msg"></h1>
-    <button onclick="location.reload()">REMATCH</button>
+    <div id="win-card">
+        <h1 id="win-msg"></h1>
+        <img src="" id="win-char-img"> <button onclick="location.reload()">REMATCH</button>
+    </div>
 </div>
 
 <audio id="snd-hit" src="https://actions.google.com/sounds/v1/cartoon/clap.ogg"></audio>
 <audio id="snd-special" src="https://actions.google.com/sounds/v1/science_fiction/low_fuzz_hum.ogg"></audio>
 
 <script>
-    let stats = {
-        left: { hp: 100, sp: 0 },
-        right: { hp: 100, sp: 0 }
+    // --- [핵심] 이미지 파일 설정 ---
+    const CHAR_IMAGES = {
+        left: { idle: 'oni_idle.png', attack: 'oni_attack.png', hit: 'oni_hit.png' },
+        right: { idle: 'harmony_idle.png', attack: 'harmony_attack.png', hit: 'harmony_hit.png' }
     };
 
+    let stats = { left: { hp: 100, sp: 0 }, right: { hp: 100, sp: 0 } };
+    let gameOver = false;
+
     function doAction(attacker) {
-        if (stats.left.hp <= 0 || stats.right.hp <= 0) return;
+        if (gameOver) return;
 
         const target = attacker === 'left' ? 'right' : 'left';
         const isSpecial = stats[attacker].sp >= 100;
         
-        // 데미지 계산
+        // 데미지 및 게이지 계산 (이전과 동일)
         let dmg = isSpecial ? Math.floor(Math.random() * 15) + 15 : Math.floor(Math.random() * 8) + 3;
-        stats[target].hp -= dmg;
-        if (stats[target].hp < 0) stats[target].hp = 0;
-
-        // 게이지 충전
+        stats[target].hp = Math.max(0, stats[target].hp - dmg);
         if (!isSpecial) stats[attacker].sp += 10;
         else stats[attacker].sp = 0;
 
-        // UI 업데이트
-        render(attacker, target, dmg, isSpecial);
+        // UI 및 역동적 연출 실행
+        renderAction(attacker, target, dmg, isSpecial);
         checkGameOver();
     }
 
-    function render(atk, tar, dmg, isSpecial) {
-        // HP/SP 바
+    function renderAction(atk, tar, dmg, isSpecial) {
+        // HP/SP 바 업데이트
         document.getElementById(`hp-${tar[0]}`).style.width = stats[tar].hp + '%';
         document.getElementById(`sp-${atk[0]}`).style.width = stats[atk].sp + '%';
 
-        // 데미지 텍스트 생성
-        const tarWrapper = document.getElementById(`wrapper-${tar[0]}`);
-        const dmgTag = document.createElement('div');
-        dmgTag.className = 'dmg-text';
-        dmgTag.innerText = isSpecial ? `CRITICAL! -${dmg}` : `-${dmg}`;
-        tarWrapper.appendChild(dmgTag);
-        setTimeout(() => dmgTag.remove(), 800);
-
-        // 연출
-        const stage = document.getElementById('game-stage');
+        // 1. 공격 이미지 변경
+        const atkImg = document.getElementById(`img-${atk[0]}`);
         const atkWrapper = document.getElementById(`wrapper-${atk[0]}`);
-        
-        // 공격 모션
-        atkWrapper.style.transform = atk === 'left' ? 'translateX(50px)' : 'translateX(-50px)';
-        setTimeout(() => atkWrapper.style.transform = 'none', 100);
+        atkImg.src = CHAR_IMAGES[atk].attack;
+        atkWrapper.style.transform = atk === 'left' ? 'translateX(70px) scale(1.1)' : 'translateX(-70px) scale(1.1)'; // 격렬한 돌진
+        setTimeout(() => { atkImg.src = CHAR_IMAGES[atk].idle; atkWrapper.style.transform = 'none'; }, 200);
 
-        // 피격 효과
-        stage.classList.add('shake');
-        setTimeout(() => stage.classList.remove('shake'), 200);
+        // 2. 피격 이미지 변경 및 타격감 연출
+        setTimeout(() => {
+            if (gameOver) return;
+            const tarImg = document.getElementById(`img-${tar[0]}`);
+            const tarWrapper = document.getElementById(`wrapper-${tar[0]}`);
+            const stage = document.getElementById('game-stage');
+            const flash = document.getElementById('flash');
 
-        // 사운드 및 특수효과
-        if (isSpecial) {
-            document.getElementById('snd-special').play();
-            const fx = document.getElementById('special-fx');
-            fx.style.opacity = '0.5';
-            setTimeout(() => fx.style.opacity = '0', 200);
-        } else {
-            const hitSnd = document.getElementById('snd-hit').cloneNode();
-            hitSnd.play();
-        }
+            // 이미지 변경
+            tarImg.src = CHAR_IMAGES[tar].hit;
+            tarWrapper.classList.add('shake');
+            stage.classList.add('shake');
+            flash.style.opacity = isSpecial ? '0.6' : '0.2'; // 필살기일 때 더 밝게
+
+            // 데미지 텍스트
+            const dmgTag = document.createElement('div');
+            dmgTag.className = 'dmg-text';
+            dmgTag.innerText = isSpecial ? `CRITICAL! -${dmg}` : `-${dmg}`;
+            tarWrapper.appendChild(dmgTag);
+
+            // 사운드
+            if (isSpecial) document.getElementById('snd-special').play();
+            else { const hitSnd = document.getElementById('snd-hit').cloneNode(); hitSnd.play(); }
+
+            // 원상복귀
+            setTimeout(() => {
+                if (gameOver) return;
+                tarImg.src = CHAR_IMAGES[tar].idle;
+                tarWrapper.classList.remove('shake');
+                stage.classList.remove('shake');
+                flash.style.opacity = '0';
+                dmgTag.remove();
+            }, 300);
+        }, 100); // 공격 모션 후 피격 모션
     }
 
     function checkGameOver() {
         if (stats.left.hp <= 0 || stats.right.hp <= 0) {
-            const winner = stats.left.hp > 0 ? 'ONI BOMBER' : 'HARMONY GARDEN';
-            document.getElementById('win-msg').innerText = winner + " WINS!";
-            document.getElementById('overlay').style.display = 'flex';
+            gameOver = true;
+            const winner = stats.left.hp > 0 ? 'left' : 'right';
+            const winnerName = winner === 'left' ? 'ONI BOMBER' : 'HARMONY GARDEN';
+            
+            // 승리 연출
+            showVictoryScreen(winner, winnerName);
         }
+    }
+
+    function showVictoryScreen(winner, winnerName) {
+        const overlay = document.getElementById('overlay');
+        const winCard = document.getElementById('win-card');
+        const winMsg = document.getElementById('win-msg');
+        const winCharImg = document.getElementById('win-char-img');
+
+        // 승리 카드 정보 설정
+        winMsg.innerText = winnerName + " WINS!";
+        winCharImg.src = CHAR_IMAGES[winner].idle; // 승리 캐릭터 idle 이미지
+
+        // 화면 표시 및 애니메이션
+        overlay.style.display = 'flex';
+        setTimeout(() => winCard.classList.add('show'), 50); // 서서히 나타나는 효과
     }
 </script>
 </body>
