@@ -3,237 +3,186 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>픽셀 몬스터 배틀</title>
+    <title>슈퍼 픽셀 몬스터 배틀</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
         body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            background-color: #2c3e50; /* 어두운 배경 */
-            font-family: 'Courier New', Courier, monospace; /* 픽셀 느낌 폰트 */
-            touch-action: none; /* 모바일 줌 방지 */
+            margin: 0; padding: 0; overflow: hidden;
+            background: #1a1a1a; color: white;
+            font-family: 'Press Start 2P', cursive;
+            touch-action: none; user-select: none;
         }
 
-        #game-container {
-            display: flex;
-            width: 100vw;
-            height: 100vh;
-        }
-
-        /* 각 캐릭터 영역 (터치 영역) */
-        .character-zone {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
+        #game-stage {
+            display: flex; width: 100vw; height: 100vh;
+            background: linear-gradient(to bottom, #2c3e50, #000000);
             position: relative;
-            cursor: pointer;
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            transition: background-color 0.1s;
         }
 
-        /* 클릭 시 시각 피드백 */
-        .character-zone:active {
-            background-color: rgba(255, 255, 255, 0.05);
+        .side {
+            flex: 1; display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            position: relative; z-index: 1;
         }
 
-        /* 캐릭터 이미지 스타일 */
-        .character-img {
-            max-width: 80%;
-            max-height: 60vh;
-            image-rendering: pixelated; /* 픽셀 아트 선명하게 */
-            transition: transform 0.1s ease-out; /* 공격 모션 */
+        /* 캐릭터 이미지 및 애니메이션 */
+        .char-wrapper { position: relative; transition: transform 0.1s; }
+        .character { width: 180px; height: auto; image-rendering: pixelated; }
+
+        /* 타격 효과 */
+        .dmg-text {
+            position: absolute; color: #ffeb3b; font-size: 20px;
+            animation: floatUp 0.8s forwards; pointer-events: none;
+            text-shadow: 2px 2px #000;
+        }
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-100px); }
         }
 
-        /* 공격 애니메이션 클래스 */
-        .attack-left { transform: translateX(20px) scale(1.1); }
-        .attack-right { transform: translateX(-20px) scale(1.1); }
+        /* 체력바 디자인 */
+        .ui-box { width: 80%; margin-bottom: 20px; text-align: center; }
+        .hp-bg { height: 25px; background: #444; border: 4px solid #fff; position: relative; }
+        .hp-fill { height: 100%; background: #4caf50; width: 100%; transition: width 0.3s; }
+        .name-tag { margin-bottom: 10px; font-size: 12px; }
 
-        /* 데미지 피드백 클래스 (흔들리기) */
-        .hit { animation: shake 0.3s; }
-        @keyframes shake {
-            0% { transform: translate(1px, 1px); }
-            50% { transform: translate(-1px, -1px); }
-            100% { transform: translate(1px, -1px); }
+        /* 필살기 게이지 */
+        .sp-bg { height: 10px; background: #222; margin-top: 5px; border: 2px solid #fff; }
+        .sp-fill { height: 100%; background: #e91e63; width: 0%; transition: width 0.1s; }
+
+        /* 화면 흔들림 */
+        .shake { animation: shakeAnim 0.2s; }
+        @keyframes shakeAnim {
+            0% { transform: translate(2px, 2px); }
+            25% { transform: translate(-2px, -2px); }
+            50% { transform: translate(2px, -2px); }
+            100% { transform: translate(0, 0); }
         }
 
-        /* 체력바 스타일 */
-        .hp-container {
-            width: 80%;
-            height: 20px;
-            background-color: #e74c3c; /* 깎인 체력 색 */
-            border-radius: 10px;
-            overflow: hidden;
-            margin-top: 20px;
-            border: 2px solid #fff;
+        /* 필살기 연출 */
+        #special-fx {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: white; opacity: 0; pointer-events: none; z-index: 10;
         }
 
-        .hp-bar {
-            height: 100%;
-            background-color: #2ecc71; /* 남은 체력 색 */
-            width: 100%;
-            transition: width 0.2s ease-out;
+        #overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); display: none;
+            flex-direction: column; justify-content: center; align-items: center; z-index: 100;
         }
-
-        .hp-text {
-            color: white;
-            font-weight: bold;
-            font-size: 1.2em;
-            margin-top: 5px;
-        }
-
-        /* 승리/패배 화면 오버레이 */
-        #result-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.85);
-            display: none; /* 평소엔 숨김 */
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            z-index: 100;
-        }
-
-        #result-text {
-            font-size: 3em;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        #restart-btn {
-            padding: 15px 30px;
-            font-size: 1.5em;
-            background-color: #3498db;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
+        button {
+            padding: 20px 40px; font-family: 'Press Start 2P';
+            background: #ff5722; color: white; border: none; cursor: pointer;
         }
     </style>
 </head>
 <body>
 
-    <div id="game-container">
-        <div class="character-zone" id="zone-left" onclick="attack('left')">
-            <img src="oni.png" alt="오니" class="character-img" id="img-left">
-            <div class="hp-container">
-                <div class="hp-bar" id="hp-bar-left"></div>
-            </div>
-            <div class="hp-text" id="hp-text-left">100 / 100</div>
+<div id="game-stage">
+    <div id="special-fx"></div>
+    
+    <div class="side" onclick="doAction('left')">
+        <div class="ui-box">
+            <div class="name-tag">ONI BOMBER</div>
+            <div class="hp-bg"><div id="hp-l" class="hp-fill"></div></div>
+            <div class="sp-bg"><div id="sp-l" class="sp-fill"></div></div>
         </div>
-
-        <div class="character-zone" id="zone-right" onclick="attack('right')">
-            <img src="harmony.png" alt="하모니 가디언" class="character-img" id="img-right">
-            <div class="hp-container">
-                <div class="hp-bar" id="hp-bar-right"></div>
-            </div>
-            <div class="hp-text" id="hp-text-right">100 / 100</div>
+        <div id="wrapper-l" class="char-wrapper">
+            <img src="oni.png" class="character">
         </div>
     </div>
 
-    <div id="result-overlay">
-        <div id="result-text">승리!</div>
-        <button id="restart-btn" onclick="resetGame()">다시 하기</button>
+    <div class="side" onclick="doAction('right')">
+        <div class="ui-box">
+            <div class="name-tag">HARMONY GARDEN</div>
+            <div class="hp-bg"><div id="hp-r" class="hp-fill"></div></div>
+            <div class="sp-bg"><div id="sp-r" class="sp-fill"></div></div>
+        </div>
+        <div id="wrapper-r" class="char-wrapper">
+            <img src="harmony.png" class="character">
+        </div>
     </div>
+</div>
 
-    <script>
-        const maxHP = 100;
-        let hpLeft = maxHP;
-        let hpRight = maxHP;
-        let gameOver = false;
+<div id="overlay">
+    <h1 id="win-msg"></h1>
+    <button onclick="location.reload()">REMATCH</button>
+</div>
 
-        const imgLeft = document.getElementById('img-left');
-        const imgRight = document.getElementById('img-right');
-        const hpBarLeft = document.getElementById('hp-bar-left');
-        const hpBarRight = document.getElementById('hp-bar-right');
-        const hpTextLeft = document.getElementById('hp-text-left');
-        const hpTextRight = document.getElementById('hp-text-right');
-        const resultOverlay = document.getElementById('result-overlay');
-        const resultText = document.getElementById('result-text');
+<audio id="snd-hit" src="https://actions.google.com/sounds/v1/cartoon/clap.ogg"></audio>
+<audio id="snd-special" src="https://actions.google.com/sounds/v1/science_fiction/low_fuzz_hum.ogg"></audio>
 
-        // 공격 함수
-        function attack(attacker) {
-            if (gameOver) return; // 게임 종료 시 클릭 무시
+<script>
+    let stats = {
+        left: { hp: 100, sp: 0 },
+        right: { hp: 100, sp: 0 }
+    };
 
-            // 1~10 사이의 랜덤 데미지 계산
-            const damage = Math.floor(Math.random() * 10) + 1;
+    function doAction(attacker) {
+        if (stats.left.hp <= 0 || stats.right.hp <= 0) return;
 
-            if (attacker === 'left') {
-                // 왼쪽 캐릭터가 공격
-                animateAttack(imgLeft, 'left');
-                takeDamage('right', damage);
-            } else {
-                // 오른쪽 캐릭터가 공격
-                animateAttack(imgRight, 'right');
-                takeDamage('left', damage);
-            }
+        const target = attacker === 'left' ? 'right' : 'left';
+        const isSpecial = stats[attacker].sp >= 100;
+        
+        // 데미지 계산
+        let dmg = isSpecial ? Math.floor(Math.random() * 15) + 15 : Math.floor(Math.random() * 8) + 3;
+        stats[target].hp -= dmg;
+        if (stats[target].hp < 0) stats[target].hp = 0;
+
+        // 게이지 충전
+        if (!isSpecial) stats[attacker].sp += 10;
+        else stats[attacker].sp = 0;
+
+        // UI 업데이트
+        render(attacker, target, dmg, isSpecial);
+        checkGameOver();
+    }
+
+    function render(atk, tar, dmg, isSpecial) {
+        // HP/SP 바
+        document.getElementById(`hp-${tar[0]}`).style.width = stats[tar].hp + '%';
+        document.getElementById(`sp-${atk[0]}`).style.width = stats[atk].sp + '%';
+
+        // 데미지 텍스트 생성
+        const tarWrapper = document.getElementById(`wrapper-${tar[0]}`);
+        const dmgTag = document.createElement('div');
+        dmgTag.className = 'dmg-text';
+        dmgTag.innerText = isSpecial ? `CRITICAL! -${dmg}` : `-${dmg}`;
+        tarWrapper.appendChild(dmgTag);
+        setTimeout(() => dmgTag.remove(), 800);
+
+        // 연출
+        const stage = document.getElementById('game-stage');
+        const atkWrapper = document.getElementById(`wrapper-${atk[0]}`);
+        
+        // 공격 모션
+        atkWrapper.style.transform = atk === 'left' ? 'translateX(50px)' : 'translateX(-50px)';
+        setTimeout(() => atkWrapper.style.transform = 'none', 100);
+
+        // 피격 효과
+        stage.classList.add('shake');
+        setTimeout(() => stage.classList.remove('shake'), 200);
+
+        // 사운드 및 특수효과
+        if (isSpecial) {
+            document.getElementById('snd-special').play();
+            const fx = document.getElementById('special-fx');
+            fx.style.opacity = '0.5';
+            setTimeout(() => fx.style.opacity = '0', 200);
+        } else {
+            const hitSnd = document.getElementById('snd-hit').cloneNode();
+            hitSnd.play();
         }
+    }
 
-        // 공격 애니메이션 처리
-        function animateAttack(imgEl, direction) {
-            const attackClass = direction === 'left' ? 'attack-left' : 'attack-right';
-            imgEl.classList.add(attackClass);
-            setTimeout(() => {
-                imgEl.classList.remove(attackClass);
-            }, 100); // 0.1초 후 원상복귀
+    function checkGameOver() {
+        if (stats.left.hp <= 0 || stats.right.hp <= 0) {
+            const winner = stats.left.hp > 0 ? 'ONI BOMBER' : 'HARMONY GARDEN';
+            document.getElementById('win-msg').innerText = winner + " WINS!";
+            document.getElementById('overlay').style.display = 'flex';
         }
-
-        // 데미지 입히기 및 체력 업데이트
-        function takeDamage(target, damage) {
-            const targetImg = target === 'left' ? imgLeft : imgRight;
-            
-            // 데미지 피드백 애니메이션 (흔들리기)
-            targetImg.classList.add('hit');
-            setTimeout(() => targetImg.classList.remove('hit'), 300);
-
-            if (target === 'left') {
-                hpLeft = Math.max(0, hpLeft - damage); // 0 이하로 안 내려가게
-                updateHPBar(hpBarLeft, hpTextLeft, hpLeft);
-            } else {
-                hpRight = Math.max(0, hpRight - damage);
-                updateHPBar(hpBarRight, hpTextRight, hpRight);
-            }
-
-            checkWinCondition();
-        }
-
-        // 체력바 및 텍스트 업데이트
-        function updateHPBar(barEl, textEl, currentHP) {
-            const widthPercent = (currentHP / maxHP) * 100;
-            barEl.style.width = widthPercent + '%';
-            textEl.innerText = `${currentHP} / ${maxHP}`;
-        }
-
-        // 승리 조건 확인
-        function checkWinCondition() {
-            if (hpLeft <= 0) {
-                endGame('오른쪽 (하모니)');
-            } else if (hpRight <= 0) {
-                endGame('왼쪽 (오니)');
-            }
-        }
-
-        // 게임 종료 처리
-        function endGame(winnerName) {
-            gameOver = true;
-            resultText.innerText = `${winnerName} 승리!`;
-            resultOverlay.style.display = 'flex'; // 결과 화면 표시
-        }
-
-        // 게임 리셋 (다시 하기)
-        function resetGame() {
-            hpLeft = maxHP;
-            hpRight = maxHP;
-            gameOver = false;
-            updateHPBar(hpBarLeft, hpTextLeft, hpLeft);
-            updateHPBar(hpBarRight, hpTextRight, hpRight);
-            resultOverlay.style.display = 'none'; // 결과 화면 숨김
-        }
-    </script>
+    }
+</script>
 </body>
 </html>
